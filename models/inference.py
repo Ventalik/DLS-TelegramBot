@@ -82,35 +82,35 @@ class ESRGAN:
         self.device = 'cpu'
         self.model = None
 
-    async def init_model(self, weight_path):
-        model = await self.get_model()
+    async def _init_model(self, weight_path):
+        model = await self._get_model()
         model = model.to(self.device)
         model.load_state_dict(torch.load(weight_path), strict=True)
         model.eval()
 
         return model
 
-    async def choice_device(self, sizes):
+    async def _choice_device(self, sizes):
         if max(sizes) > self.RESCALE_SIZE:
             self.device = 'cpu'
         else:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    async def get_model(self):
+    async def _get_model(self):
         return RRDBNet(3, 3, 64, 23, gc=32)
 
     async def predict(self, image):
-        await self.choice_device(image.size)
-        self.model = await self.init_model(self.weight_path)
+        await self._choice_device(image.size)
+        self.model = await self._init_model(self.weight_path)
 
-        image = await self.prepare_img(image)
+        image = await self._prepare_img(image)
         with torch.no_grad():
             res = self.model(image)[0].float().clamp_(0, 1)
-        res = await self.postprocessor(res)
+        res = await self._postprocessor(res)
 
         return res
 
-    async def prepare_img(self, image):
+    async def _prepare_img(self, image):
         if min(image.size) > self.RESCALE_SIZE:
             transform = transforms.Resize(self.RESCALE_SIZE, Image.BICUBIC)
             image = transform(image)
@@ -120,10 +120,10 @@ class ESRGAN:
         image_torch = image_torch.unsqueeze(0).float().to(self.device)
         return image_torch
 
-    async def postprocessor(self, image):
-        return np.rollaxis(await self.tensor2image(image), 0, 3)
+    async def _postprocessor(self, image):
+        return np.rollaxis(await self._tensor2image(image), 0, 3)
 
-    async def tensor2image(self, tensor):
+    async def _tensor2image(self, tensor):
         image = 255 * (tensor.cpu().numpy())
         image = image.round()
         return image.astype(np.uint8)
