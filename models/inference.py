@@ -17,32 +17,32 @@ class CycleGAN:
     RESCALE_SIZE = 512
 
     def __init__(self, weight_path):
-        self.device = self.get_device()
-        self.model = self.init_model(weight_path)
+        self.device = self._get_device()
+        self.model = self._init_model(weight_path)
 
-    def get_device(self):
+    def _get_device(self):
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         return device
 
-    def init_model(self, weight_path):
-        model = self.get_model().to(self.device)
+    def _init_model(self, weight_path):
+        model = self._get_model().to(self.device)
         checkpoint = torch.load(weight_path)
         model.load_state_dict(checkpoint['B2A_gen_state_dict'])
         model.eval()
 
         return model
 
-    def get_model(self):
+    def _get_model(self):
         return Generator(32)
 
     async def predict(self, image):
-        image = await self.prepare_img(image)
+        image = await self._prepare_img(image)
         with torch.no_grad():
-            res = self.model(image)[0].float().clamp_(-1, 1)
-        res = await self.postprocessor(res)
+            res = self.model(image)[0].float()
+        res = await self._postprocessor(res)
         return res
 
-    async def prepare_img(self, image):
+    async def _prepare_img(self, image):
         width, height = image.size
 
         # Приводим изображения к такому виду,
@@ -66,10 +66,10 @@ class CycleGAN:
 
         return transformed_image
 
-    async def postprocessor(self, image):
-        return np.rollaxis(await self.tensor2image(image), 0, 3)
+    async def _postprocessor(self, image):
+        return np.rollaxis(await self._tensor2image(image), 0, 3)
 
-    async def tensor2image(self, tensor):
+    async def _tensor2image(self, tensor):
         image = 127.5 * (tensor.cpu().detach().numpy() + 1.0)
         return image.astype(np.uint8)
 
