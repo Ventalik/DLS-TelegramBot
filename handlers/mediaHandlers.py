@@ -14,13 +14,10 @@ async def process_photo(msg: types.Message):
     model = await get_model(await state.get_state())
     if model is not None:
         image = await load_img_from_message(msg)
-        if max(image.size) >= 1280 and state.get_state() == BotStates.SUPER_RESOLUTION_STATE:
-            await bot.send_message(msg.from_user.id, MESSAGES['big picture'])
-        else:
-            styled_image = await model.predict(image)
-            photo = await load_img_in_buffer(styled_image)
+        styled_image = await model.predict(image)
+        photo = await load_img_in_buffer(styled_image)
 
-            await bot.send_document(msg.from_user.id, document=photo)
+        await bot.send_document(msg.from_user.id, document=photo)
     else:
         await bot.send_message(msg.from_user.id, MESSAGES['unknown photo'])
 

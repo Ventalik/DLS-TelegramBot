@@ -75,6 +75,8 @@ class CycleGAN:
 
 
 class ESRGAN:
+    RESCALE_SIZE = 720
+
     def __init__(self, weight_path):
         self.weight_path = weight_path
         self.device = 'cpu'
@@ -89,7 +91,7 @@ class ESRGAN:
         return model
 
     async def choice_device(self, sizes):
-        if max(sizes) > 720:
+        if max(sizes) > self.RESCALE_SIZE:
             self.device = 'cpu'
         else:
             self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -98,8 +100,7 @@ class ESRGAN:
         return RRDBNet(3, 3, 64, 23, gc=32)
 
     async def predict(self, image):
-        width, height = image.size
-        await self.choice_device((width, height))
+        await self.choice_device(image.size)
         self.model = await self.init_model(self.weight_path)
 
         image = await self.prepare_img(image)
@@ -110,6 +111,9 @@ class ESRGAN:
         return res
 
     async def prepare_img(self, image):
+        if min(image.size) > self.RESCALE_SIZE:
+            transform = transforms.Resize(self.RESCALE_SIZE, Image.BICUBIC)
+            image = transform(image)
         image = np.array(image)
         image = image * 1.0 / 255
         image_torch = torch.from_numpy(np.rollaxis(image, 2, 0))
