@@ -149,19 +149,18 @@ class StyleTransfer:
                 num_steps=500, style_weight=100000, content_weight=1):
 
         cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
+
+        content_img, style_img = self._prepare_img(content_img, style_img)
         input_img = content_img.clone()
 
-        model, style_losses, content_losses = self.get_style_model_and_losses(cnn, self.CNN_NORMALIZATION_MEAN,
-                                                                              self.CNN_NORMALIZATION_STD,
-                                                                              style_img, content_img)
+        model, style_losses, content_losses = self._get_style_model_and_losses(cnn, style_img, content_img)
 
-        optimizer = self.get_input_optimizer(input_img)
+        optimizer = self._get_input_optimizer(input_img)
 
         run = [0]
         while run[0] <= num_steps:
 
             def closure():
-                # correct the values
                 # это для того, чтобы значения тензора картинки не выходили за пределы [0;1]
                 input_img.data.clamp_(0, 1)
 
@@ -223,20 +222,14 @@ class StyleTransfer:
 
         return transformed_content_img, transformed_style_img
 
-    def get_style_model_and_losses(self, cnn, normalization_mean, normalization_std,
-                                   style_img, content_img):
+    def _get_style_model_and_losses(self, cnn, style_img, content_img):
         cnn = copy.deepcopy(cnn)
 
-        # normalization module
-        normalization = Normalization(normalization_mean, normalization_std).to(self.device)
+        normalization = Normalization(self.CNN_NORMALIZATION_MEAN, self.CNN_NORMALIZATION_STD,).to(self.device)
 
-        # just in order to have an iterable access to or list of content/syle
-        # losses
         content_losses = []
         style_losses = []
 
-        # assuming that cnn is a nn.Sequential, so we make a new nn.Sequential
-        # to put in modules that are supposed to be activated sequentially
         model = nn.Sequential(normalization)
 
         i = 0  # increment every time we see a conv
@@ -246,9 +239,7 @@ class StyleTransfer:
                 name = 'conv_{}'.format(i)
             elif isinstance(layer, nn.ReLU):
                 name = 'relu_{}'.format(i)
-                # The in-place version doesn't play very nicely with the ContentLoss
-                # and StyleLoss we insert below. So we replace with out-of-place
-                # ones here.
+
                 # Переопределим relu уровень
                 layer = nn.ReLU(inplace=False)
             elif isinstance(layer, nn.MaxPool2d):
@@ -273,7 +264,7 @@ class StyleTransfer:
                 model.add_module("style_loss_{}".format(i), style_loss)
                 style_losses.append(style_loss)
 
-        # выбрасываем все уровни после последенего styel loss или content loss
+        # выбрасываем все уровни после последенего style_loss или content loss
         for i in range(len(model) - 1, -1, -1):
             if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
                 break
@@ -282,9 +273,17 @@ class StyleTransfer:
 
         return model, style_losses, content_losses
 
-    def get_input_optimizer(self, input_img):
+    def _get_input_optimizer(self, input_img):
         optimizer = torch.optim.LBFGS([input_img.requires_grad_()])
         return optimizer
+
+    def _postprocessor(self, image):
+        return np.rollaxis(await self._tensor2image(image), 0, 3)
+
+    def _tensor2image(self, tensor):
+        image = 255 * (tensor.cpu().numpy())
+        image = image.round()
+        return image.astype(np.uint8)
 
 
 async def get_model(state):
