@@ -1,9 +1,10 @@
 import torch
-from .layers import Generator, RRDBNet
+from .layers import *
 from torchvision import transforms
 from states import BotStates
 from PIL import Image
 import numpy as np
+import copy
 
 WEIGHTS = {
     BotStates.CUBISM_STATE: 'models/weights/cubism.tar',
@@ -130,7 +131,127 @@ class ESRGAN:
 
 
 class StyleTransfer:
-    pass
+    CONTENT_LAYERS = ['conv_4']
+    STYLE_LAYERS = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
+
+    def __init__(self):
+        self.device = self._get_device()
+
+    def _get_device(self):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        return device
+
+    def predict(self, cnn, normalization_mean, normalization_std,
+                content_img, style_img, input_img, num_steps=500,
+                style_weight=100000, content_weight=1):
+
+        model, style_losses, content_losses = self.get_style_model_and_losses(cnn,
+                                                                              normalization_mean, normalization_std,
+                                                                              style_img, content_img)
+        optimizer = self.get_input_optimizer(input_img)
+
+        run = [0]
+        while run[0] <= num_steps:
+
+            def closure():
+                # correct the values
+                # это для того, чтобы значения тензора картинки не выходили за пределы [0;1]
+                input_img.data.clamp_(0, 1)
+
+                optimizer.zero_grad()
+
+                model(input_img)
+
+                style_score = 0
+                content_score = 0
+
+                for sl in style_losses:
+                    style_score += sl.loss
+                for cl in content_losses:
+                    content_score += cl.loss
+
+                style_score *= style_weight
+                content_score *= content_weight
+
+                loss = style_score + content_score
+                loss.backward()
+
+                run[0] += 1
+
+                return style_score + content_score
+
+            optimizer.step(closure)
+
+        input_img.data.clamp_(0, 1)
+
+        return input_img
+
+    def get_style_model_and_losses(self, cnn, normalization_mean, normalization_std,
+                                   style_img, content_img):
+        cnn = copy.deepcopy(cnn)
+
+        # normalization module
+        normalization = Normalization(normalization_mean, normalization_std).to(self.device)
+
+        # just in order to have an iterable access to or list of content/syle
+        # losses
+        content_losses = []
+        style_losses = []
+
+        # assuming that cnn is a nn.Sequential, so we make a new nn.Sequential
+        # to put in modules that are supposed to be activated sequentially
+        model = nn.Sequential(normalization)
+
+        i = 0  # increment every time we see a conv
+        for layer in cnn.children():
+            if isinstance(layer, nn.Conv2d):
+                i += 1
+                name = 'conv_{}'.format(i)
+            elif isinstance(layer, nn.ReLU):
+                name = 'relu_{}'.format(i)
+                # The in-place version doesn't play very nicely with the ContentLoss
+                # and StyleLoss we insert below. So we replace with out-of-place
+                # ones here.
+                # Переопределим relu уровень
+                layer = nn.ReLU(inplace=False)
+            elif isinstance(layer, nn.MaxPool2d):
+                name = 'pool_{}'.format(i)
+            elif isinstance(layer, nn.BatchNorm2d):
+                name = 'bn_{}'.format(i)
+            else:
+                raise RuntimeError('Unrecognized layer: {}'.format(layer.__class__.__name__))
+
+            model.add_module(name, layer)
+
+            if name in self.CONTENT_LAYERS:
+                # add content loss:
+                target = model(content_img).detach()
+                content_loss = ContentLoss(target)
+                model.add_module("content_loss_{}".format(i), content_loss)
+                content_losses.append(content_loss)
+
+            if name in self.STYLE_LAYERS:
+                # add style loss:
+                target_feature = model(style_img).detach()
+                style_loss = StyleLoss(target_feature)
+                model.add_module("style_loss_{}".format(i), style_loss)
+                style_losses.append(style_loss)
+
+        # now we trim off the layers after the last content and style losses
+        # выбрасываем все уровни после последенего styel loss или content loss
+        for i in range(len(model) - 1, -1, -1):
+            if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
+                break
+
+        model = model[:(i + 1)]
+
+        return model, style_losses, content_losses
+
+    def get_input_optimizer(self, input_img):
+        # this line to show that input is a parameter that requires a gradient
+        # добоваляет содержимое тензора катринки в список изменяемых оптимизатором параметров
+        optimizer = torch.optim.LBFGS([input_img.requires_grad_()])
+        return optimizer
 
 
 async def get_model(state):
