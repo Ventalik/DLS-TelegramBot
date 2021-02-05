@@ -132,6 +132,7 @@ class ESRGAN:
 
 
 class StyleTransfer:
+    RESCALE_SIZE = 512
     CONTENT_LAYERS = ['conv_4']
     STYLE_LAYERS = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
     CNN_NORMALIZATION_MEAN = torch.tensor([0.485, 0.456, 0.406])
@@ -146,7 +147,7 @@ class StyleTransfer:
 
     def predict(self, content_img, style_img,
                 num_steps=500, style_weight=100000, content_weight=1):
-        
+
         cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
         input_img = content_img.clone()
 
@@ -191,6 +192,36 @@ class StyleTransfer:
         input_img.data.clamp_(0, 1)
 
         return input_img
+
+    def _prepare_img(self, content_img, style_img):
+        width, height = content_img.size
+
+        # Приводим изображения к такому виду,
+        # чтобы меньшая сторана была ровна 512 а большая кратна 32
+        if width > height:
+            width = 32 * int((self.RESCALE_SIZE * width / height) // 32)
+            height = self.RESCALE_SIZE
+        else:
+            height = 32 * int((self.RESCALE_SIZE * height / width) // 32)
+            width = self.RESCALE_SIZE
+
+        content_transform = transforms.Compose([
+            transforms.Resize(self.RESCALE_SIZE, Image.BICUBIC),
+            transforms.CenterCrop((height, width)),
+            transforms.ToTensor(),
+        ])
+        style_transform = transforms.Compose([
+            transforms.Resize((height, width), Image.BICUBIC),
+            transforms.ToTensor(),
+        ])
+
+        transformed_content_img = content_transform(content_img)
+        transformed_style_img = style_transform(style_img)
+
+        transformed_content_img = transformed_content_img.unsqueeze(0).to(self.device)
+        transformed_style_img = transformed_style_img.unsqueeze(0).to(self.device)
+
+        return transformed_content_img, transformed_style_img
 
     def get_style_model_and_losses(self, cnn, normalization_mean, normalization_std,
                                    style_img, content_img):
@@ -237,13 +268,11 @@ class StyleTransfer:
                 content_losses.append(content_loss)
 
             if name in self.STYLE_LAYERS:
-                # add style loss:
                 target_feature = model(style_img).detach()
                 style_loss = StyleLoss(target_feature)
                 model.add_module("style_loss_{}".format(i), style_loss)
                 style_losses.append(style_loss)
 
-        # now we trim off the layers after the last content and style losses
         # выбрасываем все уровни после последенего styel loss или content loss
         for i in range(len(model) - 1, -1, -1):
             if isinstance(model[i], ContentLoss) or isinstance(model[i], StyleLoss):
@@ -254,8 +283,6 @@ class StyleTransfer:
         return model, style_losses, content_losses
 
     def get_input_optimizer(self, input_img):
-        # this line to show that input is a parameter that requires a gradient
-        # добоваляет содержимое тензора катринки в список изменяемых оптимизатором параметров
         optimizer = torch.optim.LBFGS([input_img.requires_grad_()])
         return optimizer
 
