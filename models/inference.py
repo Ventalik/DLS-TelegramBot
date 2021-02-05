@@ -1,5 +1,6 @@
 import torch
 from .layers import *
+from torchvision import models
 from torchvision import transforms
 from states import BotStates
 from PIL import Image
@@ -133,6 +134,8 @@ class ESRGAN:
 class StyleTransfer:
     CONTENT_LAYERS = ['conv_4']
     STYLE_LAYERS = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
+    CNN_NORMALIZATION_MEAN = torch.tensor([0.485, 0.456, 0.406])
+    CNN_NORMALIZATION_STD = torch.tensor([0.229, 0.224, 0.225])
 
     def __init__(self):
         self.device = self._get_device()
@@ -141,13 +144,16 @@ class StyleTransfer:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         return device
 
-    def predict(self, cnn, normalization_mean, normalization_std,
-                content_img, style_img, input_img, num_steps=500,
-                style_weight=100000, content_weight=1):
+    def predict(self, content_img, style_img,
+                num_steps=500, style_weight=100000, content_weight=1):
+        
+        cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
+        input_img = content_img.clone()
 
-        model, style_losses, content_losses = self.get_style_model_and_losses(cnn,
-                                                                              normalization_mean, normalization_std,
+        model, style_losses, content_losses = self.get_style_model_and_losses(cnn, self.CNN_NORMALIZATION_MEAN,
+                                                                              self.CNN_NORMALIZATION_STD,
                                                                               style_img, content_img)
+
         optimizer = self.get_input_optimizer(input_img)
 
         run = [0]
