@@ -2,9 +2,18 @@ from aiogram import types
 from main import dp, bot
 from PIL import Image
 from states import BotStates
-from models.inference import get_model
+from models.inference import get_model, remember_style_image
 from messages import MESSAGES
 import io
+
+
+@dp.message_handler(content_types=['photo', 'document'], state=BotStates.STYLE_TRANSFER_STATE_1)
+async def process_style_photo(msg: types.Message):
+    image = await load_img_from_message(msg)
+    await remember_style_image(image)
+
+    state = dp.current_state(user=msg.from_user.id)
+    await state.set_state(BotStates.STYLE_TRANSFER_STATE_2)
 
 
 @dp.message_handler(content_types=['photo', 'document'], state='*')

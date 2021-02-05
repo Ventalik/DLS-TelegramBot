@@ -52,7 +52,7 @@ async def process_start_command(msg: types.Message):
     await bot.send_message(msg.from_user.id, MESSAGES['hello'], reply_markup=start_kb)
     await bot.send_message(msg.from_user.id, MESSAGES['help1'])
     await bot.send_message(msg.from_user.id, MESSAGES['help2'])
-    # await bot.send_message(msg.from_user.id, MESSAGES['help3'])
+    await bot.send_message(msg.from_user.id, MESSAGES['help3'])
     await bot.send_message(msg.from_user.id, MESSAGES['help4'])
 
 

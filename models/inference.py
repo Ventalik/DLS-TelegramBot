@@ -14,6 +14,8 @@ WEIGHTS = {
     BotStates.EXPRESSIONISM_STATE: 'models/weights/expressionism.tar'
 }
 
+style_image_buffer = None
+
 
 class CycleGAN:
     RESCALE_SIZE = 512
@@ -145,12 +147,12 @@ class StyleTransfer:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         return device
 
-    def predict(self, content_img, style_img,
-                num_steps=500, style_weight=100000, content_weight=1):
+    async def predict(self, content_img,
+                      num_steps=150, style_weight=10000, content_weight=1):
 
         cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
 
-        content_img, style_img = self._prepare_img(content_img, style_img)
+        content_img, style_img = self._prepare_img(content_img, style_image_buffer)
         input_img = content_img.clone()
 
         model, style_losses, content_losses = self._get_style_model_and_losses(cnn, style_img, content_img)
@@ -183,14 +185,14 @@ class StyleTransfer:
                 loss.backward()
 
                 run[0] += 1
-
                 return style_score + content_score
 
             optimizer.step(closure)
 
         input_img.data.clamp_(0, 1)
+        output = self._postprocessor(input_img[0])
 
-        return input_img
+        return output
 
     def _prepare_img(self, content_img, style_img):
         width, height = content_img.size
@@ -225,7 +227,9 @@ class StyleTransfer:
     def _get_style_model_and_losses(self, cnn, style_img, content_img):
         cnn = copy.deepcopy(cnn)
 
-        normalization = Normalization(self.CNN_NORMALIZATION_MEAN, self.CNN_NORMALIZATION_STD,).to(self.device)
+        normalization = Normalization(self.CNN_NORMALIZATION_MEAN.to(self.device),
+                                      self.CNN_NORMALIZATION_STD.to(self.device))
+        normalization = normalization.to(self.device)
 
         content_losses = []
         style_losses = []
@@ -278,10 +282,10 @@ class StyleTransfer:
         return optimizer
 
     def _postprocessor(self, image):
-        return np.rollaxis(await self._tensor2image(image), 0, 3)
+        return np.rollaxis(self._tensor2image(image), 0, 3)
 
     def _tensor2image(self, tensor):
-        image = 255 * (tensor.cpu().numpy())
+        image = 255 * (tensor.cpu().detach().numpy())
         image = image.round()
         return image.astype(np.uint8)
 
@@ -292,8 +296,13 @@ async def get_model(state):
     elif state == BotStates.SUPER_RESOLUTION_STATE:
         model = ESRGAN(WEIGHTS[state])
     elif state == BotStates.STYLE_TRANSFER_STATE_2:
-        model = None
+        model = StyleTransfer()
     else:
         model = None
 
     return model
+
+
+async def remember_style_image(image):
+    global style_image_buffer
+    style_image_buffer = image

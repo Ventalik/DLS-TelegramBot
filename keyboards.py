@@ -1,6 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
-START_BTN_NAMES = ['Нанесение стиля', 'Повышение качества']
+START_BTN_NAMES = ['Передача стиля', 'Нанесение стиля', 'Повышение качества']
 start_btns = [KeyboardButton(name) for name in START_BTN_NAMES]
 
 start_kb = ReplyKeyboardMarkup(resize_keyboard=True)
