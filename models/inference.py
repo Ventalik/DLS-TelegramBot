@@ -148,7 +148,7 @@ class StyleTransfer:
         return device
 
     async def predict(self, content_img,
-                      num_steps=150, style_weight=10000, content_weight=1):
+                      num_steps=150, style_weight=100000, content_weight=1):
 
         cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
 
