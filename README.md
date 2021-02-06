@@ -31,7 +31,7 @@
     <img src="imgs/test_gan.png" width="512"/>
 </p>
 
-Пример работы сети:
+Пример работы генераторов всех трех стилей:
 
 <p align="center">
     <img src="imgs/nature_original.png" width="256"/>
