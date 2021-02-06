@@ -29,6 +29,7 @@
 
 <p align="center">
     <img src="imgs/nature_original.png" width="256"/>
+    <br>
     <img src="imgs/nature_cubism.jpeg" width="256"/>
     <img src="imgs/nature_renaissance.jpeg" width="256"/>
     <img src="imgs/nature_expressionism.jpeg" width="256"/>
