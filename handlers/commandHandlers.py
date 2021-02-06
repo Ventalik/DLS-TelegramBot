@@ -8,6 +8,10 @@ from keyboards import *
 
 @dp.message_handler(filters.Text(equals=START_BTN_NAMES), state='*')
 async def process_start_keyboard(msg: types.Message):
+    """ Обрабатывает нажатия на стартовой клавиатуре
+    и меняет состояние бота
+    """
+
     state = dp.current_state(user=msg.from_user.id)
     message = ''
     kb = None
@@ -26,6 +30,10 @@ async def process_start_keyboard(msg: types.Message):
 
 @dp.message_handler(filters.Text(equals=STYLE_BTN_NAMES), state='*')
 async def process_style_keyboard(msg: types.Message):
+    """ Обрабатывает нажатия на клавиатуре выбора стиля
+    и меняет состояние бота
+    """
+
     state = dp.current_state(user=msg.from_user.id)
 
     if msg.text == 'Кубизм':
@@ -40,6 +48,10 @@ async def process_style_keyboard(msg: types.Message):
 
 @dp.message_handler(filters.Text(equals='Назад'), state='*')
 async def process_back_keyboard(msg: types.Message):
+    """ Обрабатывает нажатие кнопки 'Назад'
+    и возвращаает пользователя в начальное меню и состояние
+    """
+
     state = dp.current_state(user=msg.from_user.id)
     await state.set_state(BotStates.START_STATE)
     await bot.send_message(msg.from_user.id, MESSAGES['selecting action'], reply_markup=start_kb)
@@ -47,6 +59,10 @@ async def process_back_keyboard(msg: types.Message):
 
 @dp.message_handler(state='*', commands=['start', 'help'])
 async def process_start_command(msg: types.Message):
+    """ Обрабатывает команды старта и помощи.
+    Выводит пользователю подсказки о работе с ботом
+    """
+
     state = dp.current_state(user=msg.from_user.id)
     await state.set_state(BotStates.START_STATE)
     await bot.send_message(msg.from_user.id, MESSAGES['hello'], reply_markup=start_kb)
