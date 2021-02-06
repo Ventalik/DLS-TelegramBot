@@ -9,6 +9,11 @@ import io
 
 @dp.message_handler(content_types=['photo', 'document'], state=BotStates.STYLE_TRANSFER_STATE_1)
 async def process_style_photo(msg: types.Message):
+    """
+    Сохраняет изображение стиля в промежуточный буфер для передачи стиля.
+    Меняет состояние бота на BotStates.STYLE_TRANSFER_STATE_2.
+    """
+
     image = await load_img_from_message(msg)
     await remember_style_image(image)
 
@@ -18,6 +23,12 @@ async def process_style_photo(msg: types.Message):
 
 @dp.message_handler(content_types=['photo', 'document'], state='*')
 async def process_photo(msg: types.Message):
+    """
+    Обрабатывает входящее фото от пользлователя.
+    Применяет преобразование к фото в зависимости от текущего состояния бота.
+    Отправляет преобразованное изображение пользователю в виде документа.
+    """
+
     state = dp.current_state(user=msg.from_user.id)
 
     model = await get_model(await state.get_state())
@@ -34,6 +45,10 @@ async def process_photo(msg: types.Message):
 
 
 async def load_img_from_message(msg: types.Message):
+    """
+    Загружает изображение из сообщения
+    """
+
     buffer = io.BytesIO()
     if msg.content_type == 'photo':
         await msg.photo[-1].download(buffer)
@@ -45,6 +60,10 @@ async def load_img_from_message(msg: types.Message):
 
 
 async def load_img_in_buffer(image):
+    """
+        Загружает изображение в буфер для дальнейшей отправки
+    """
+
     buffer = io.BytesIO()
     buffer.name = 'output.jpeg'
 
