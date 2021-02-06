@@ -7,6 +7,7 @@ from PIL import Image
 import numpy as np
 import copy
 
+# Доступ к весам по состоянию бота
 WEIGHTS = {
     BotStates.CUBISM_STATE: 'models/weights/cubism.tar',
     BotStates.SUPER_RESOLUTION_STATE: 'models/weights/RRDB_ESRGAN_x4.pth',
@@ -14,6 +15,7 @@ WEIGHTS = {
     BotStates.EXPRESSIONISM_STATE: 'models/weights/expressionism.tar'
 }
 
+# Буфер изображения стиля для NST
 style_image_buffer = None
 
 
@@ -50,7 +52,7 @@ class CycleGAN:
         width, height = image.size
 
         # Приводим изображения к такому виду,
-        # чтобы меньшая сторана была ровна 512 а большая кратна 32
+        # чтобы меньшая сторона была ровна 512 а большая кратна 32
         if width > height:
             width = 32 * int((self.RESCALE_SIZE * width / height) // 32)
             height = self.RESCALE_SIZE
