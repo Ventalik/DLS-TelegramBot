@@ -24,3 +24,12 @@
 Это соревнование содержит большое количество изображений различных стиле собраных в основном с сайта [WikiArt.org](https://www.wikiart.org/).
 Фотографии второго множества из датасета ukiyoe2photo, плюс дополнительно собрано 1500 картинок с людьми из яндекс-картинок,
 так как изначально датасет содержит в основном изображения природы.
+
+Пример работы сети:
+
+<p align="center">
+    <img src="imgs/nature_original.png" width="256"/>
+    <img src="imgs/nature_cubism.jpeg" width="256"/>
+    <img src="imgs/nature_renaissance.jpeg" width="256"/>
+    <img src="imgs/nature_expressionism.jpeg" width="256"/>
+</p>
