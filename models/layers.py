@@ -212,8 +212,7 @@ class Generator(nn.Module):
 
 
 class ContentLoss(nn.Module):
-
-    def __init__(self, target, ):
+    def __init__(self, target):
         super(ContentLoss, self).__init__()
         self.target = target.detach()  # это константа. Убираем ее из дерева вычеслений
         self.loss = F.mse_loss(self.target, self.target)  # to initialize with something
@@ -246,6 +245,18 @@ class StyleLoss(nn.Module):
         # we 'normalize' the values of the gram matrix
         # by dividing by the number of element in each feature maps.
         return G.div(batch_size * h * w * f_map_num)
+
+
+class VariationLoss(nn.Module):
+    def __init__(self):
+        super(VariationLoss, self).__init__()
+        self.loss = 0
+
+    def forward(self, input):
+        a = F.mse_loss(input[:, :, :-1, :-1], input[:, :, 1:, :-1])
+        b = F.mse_loss(input[:, :, :-1, :-1], input[:, :, :-1, 1:])
+        self.loss = a+b
+        return input
 
 
 class Normalization(nn.Module):

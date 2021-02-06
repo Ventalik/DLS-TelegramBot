@@ -138,7 +138,7 @@ class ESRGAN:
 class StyleTransfer:
     RESCALE_SIZE = 512
     CONTENT_LAYERS = ['conv_4']
-    STYLE_LAYERS = ['conv_1', 'conv_2', 'conv_3', 'conv_4', 'conv_5']
+    STYLE_LAYERS = ['conv_2', 'conv_4', 'conv_6', 'conv_8', 'conv_9']
     CNN_NORMALIZATION_MEAN = torch.tensor([0.485, 0.456, 0.406])
     CNN_NORMALIZATION_STD = torch.tensor([0.229, 0.224, 0.225])
 
@@ -150,14 +150,16 @@ class StyleTransfer:
         return device
 
     async def predict(self, content_img,
-                      num_steps=150, style_weight=100000, content_weight=1):
+                      num_steps=150, style_weight=100000,
+                      content_weight=1, variation_weight=20):
 
         cnn = models.vgg19(pretrained=True).features.to(self.device).eval()
 
         content_img, style_img = self._prepare_img(content_img, style_image_buffer)
         input_img = content_img.clone()
 
-        model, style_losses, content_losses = self._get_style_model_and_losses(cnn, style_img, content_img)
+        model, style_losses, content_losses, variation_loss = \
+            self._get_style_model_and_losses(cnn, style_img, content_img)
 
         optimizer = self._get_input_optimizer(input_img)
 
@@ -179,11 +181,13 @@ class StyleTransfer:
                     style_score += sl.loss
                 for cl in content_losses:
                     content_score += cl.loss
+                variation_score = variation_loss.loss
 
                 style_score *= style_weight
                 content_score *= content_weight
+                variation_score *= variation_weight
 
-                loss = style_score + content_score
+                loss = style_score + content_score + variation_score
                 loss.backward()
 
                 run[0] += 1
@@ -200,7 +204,7 @@ class StyleTransfer:
         width, height = content_img.size
 
         # Приводим изображения к такому виду,
-        # чтобы меньшая сторана была ровна 512 а большая кратна 32
+        # чтобы меньшая сторона была ровна 512 а большая кратна 32
         if width > height:
             width = 32 * int((self.RESCALE_SIZE * width / height) // 32)
             height = self.RESCALE_SIZE
@@ -233,10 +237,14 @@ class StyleTransfer:
                                       self.CNN_NORMALIZATION_STD.to(self.device))
         normalization = normalization.to(self.device)
 
+        total_variation_loss = VariationLoss().to(self.device)
+
         content_losses = []
         style_losses = []
 
-        model = nn.Sequential(normalization)
+        model = nn.Sequential(
+            normalization,
+            total_variation_loss)
 
         i = 0  # increment every time we see a conv
         for layer in cnn.children():
@@ -277,7 +285,7 @@ class StyleTransfer:
 
         model = model[:(i + 1)]
 
-        return model, style_losses, content_losses
+        return model, style_losses, content_losses, total_variation_loss
 
     def _get_input_optimizer(self, input_img):
         optimizer = torch.optim.LBFGS([input_img.requires_grad_()])
