@@ -1,4 +1,4 @@
-
+# DLS-TelegramBot
 <p align="center">
     <img src="imgs/cubism.jpeg" width="256"/>
     <img src="imgs/renaissance.jpeg" width="256"/>
@@ -6,7 +6,6 @@
 </p>
 <br>
 
-# DLS-TelegramBot
 ## Overview
 Этот репозиторий содержит код телеграм-бота, выполненный в качестве финального проекта для Deep Learning School.
 
