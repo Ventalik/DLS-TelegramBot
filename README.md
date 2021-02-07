@@ -52,7 +52,7 @@
 
 Пример работы:
 <p align="center">
-    <img src="imgs/content.png" width="352"/>
+    <img src="imgs/content.png" width="332"/>
     <img src="imgs/style.png" width="256"/>
     <br>
     Результат после 100 итераций
