@@ -57,5 +57,5 @@
     <br>
     Результат после 100 итераций
     <br>
-    <img src="imgs/result.jpeg" width="256"/>
+    <img src="imgs/result.jpeg" width="384"/>
 </p>
