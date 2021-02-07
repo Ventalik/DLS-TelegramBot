@@ -51,3 +51,11 @@
 этих величин.
 
 Пример работы:
+<p align="center">
+    <img src="imgs/content.png" width="256"/>
+    <img src="imgs/style.png" width="256"/>
+    <br>
+    Результат после 100 итераций
+    <br>
+    <img src="imgs/result.jpeg" width="256"/>
+</p>
