@@ -1,4 +1,4 @@
-# DLS-TelegramBot
+# TelegramBot
 <p align="center">
     <img src="imgs/cubism.jpeg" width="256"/>
     <img src="imgs/renaissance.jpeg" width="256"/>
@@ -7,7 +7,6 @@
 <br>
 
 ## Overview
-Этот репозиторий содержит код телеграм-бота, выполненный в качестве финального проекта для Deep Learning School.
 
 Основные возможности бота:
 * Neural Style Transfer - передача стиля одного изображения на второе.
